@@ -1,5 +1,5 @@
 import { config } from "dotenv";
-config(); // initialise app with Dotenv - must be first!
+config(); // Load .env file
 
 import express from "express";
 import morgan from "morgan";
@@ -9,50 +9,46 @@ import authRoute from "./router/authRoute.js";
 import connect from "./database/conn.js";
 import questionRoute from './router/questionRoute.js';
 
-// Debug: Check if environment variable is loaded
-console.log("ATLAS_URI:", process.env.ATLAS_URI ? "Loaded" : "Not loaded");
-
 const app = express();
 
-/** MIDDLEWARE APP */
+/** Check if ATLAS_URI is loaded */
+console.log("ATLAS_URI:", process.env.ATLAS_URI ? "✅ Loaded" : "❌ Not loaded");
+
+/** MIDDLEWARES */
 app.use(morgan("tiny"));
-app.use(cors());
+
+// ✅ CORS setup to allow frontend access from Netlify
+app.use(cors({
+  origin: "https://marvelous-crostata-4cc3fd.netlify.app", // your frontend
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
+
 app.use(express.json());
 
-/** APP PORT NUMBERS */
-const port = process.env.PORT || 8081; // process.env.PORT doesn't exist for some reason
-
 /** ROUTES */
-// api routes
 app.use("/api", router);
 app.use("/api/auth", authRoute);
-app.use('/api/questions', questionRoute);
-// root route
+app.use("/api/questions", questionRoute);
+
+// Root route for testing
 app.get("/", (req, res) => {
-  try {
-    res.json("Get root request");
-  } catch (error) {
-    res.json(error.message);
-  }
+  res.json("Get root request");
 });
 
 app.get("/test", (req, res) => {
   res.send("Test route works!");
 });
 
-/** Connect to MongoDB database */
+/** Start server only if DB connection is successful */
+const port = process.env.PORT || 8081;
 
-// Start server only when we have a valid database connection
 connect()
   .then(() => {
-    try {
-      app.listen(port, () => {
-        console.log(`Server connected to http://localhost:${port}`);
-      });
-    } catch (error) {
-      console.log("Cannot connect to server");
-    }
+    app.listen(port, () => {
+      console.log(`✅ Server running at http://localhost:${port}`);
+    });
   })
   .catch((error) => {
-    console.log("Invalid database connection");
-  }); 
+    console.error("❌ Failed to connect to MongoDB:", error.message);
+  });
