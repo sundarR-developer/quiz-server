@@ -19,7 +19,7 @@ app.use(morgan("tiny"));
 
 // ✅ CORS setup to allow frontend access from Netlify
 app.use(cors({
-  origin: "https://marvelous-crostata-4cc3fd.netlify.app", // your frontend
+  origin: "https://frolicking-quokka-e9d71f.netlify.app/", // your frontend
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
