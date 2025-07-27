@@ -16,7 +16,7 @@ const app = express();
 /** ✅ Setup CORS */
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://frolicking-quokka-e9d71f.netlify.app"
+  "https://relaxed-travesseiro-8cc626.netlify.app"
 ];
 
 const corsOptions = {
