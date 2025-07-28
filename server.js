@@ -18,6 +18,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://frolicking-quokka-e9d71f.netlify.app",
   "https://relaxed-travesseiro-8cc626.netlify.app",
+  "https://guileless-semolina-8b71cf.netlify.app",
   "http://localhost:8081"
 ];
 
