@@ -34,6 +34,11 @@ export async function login(req, res) {
     const isMatch = await user.matchPassword(password);
     console.log('Password match:', isMatch);
     if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
+
+    if (!process.env.JWT_SECRET) {
+      console.error('FATAL ERROR: JWT_SECRET is not defined.');
+      return res.status(500).json({ msg: 'Server configuration error: JWT secret missing.' });
+    }
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token, user: { _id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
