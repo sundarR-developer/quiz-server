@@ -11,9 +11,13 @@ router.post('/auth/register', authController.register);
 router.post('/auth/login', authController.login);
 
 /** =================================== USER ROUTES (Admin Only) =================================== */
-// NOTE: User management routes like getAllUsers and updateUser are missing from controller.js
-// Only deleteUser is available.
-router.delete('/users/:id', protect, roleMiddleware('admin'), controller.deleteUser);
+router.route('/users')
+    .get(protect, roleMiddleware('admin'), controller.getUsers)
+    .post(protect, roleMiddleware('admin'), controller.addUser);
+
+router.route('/users/:id')
+    .put(protect, roleMiddleware('admin'), controller.updateUser)
+    .delete(protect, roleMiddleware('admin'), controller.deleteUser);
 
 /** =================================== QUESTION ROUTES =================================== */
 router.route('/questions')
