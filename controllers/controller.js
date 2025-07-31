@@ -201,6 +201,64 @@ export async function getExamResultAnalysis(req, res) {
 
 // --- User Management ---
 
+export async function getUsers(req, res) {
+  try {
+    // Fetch all users but exclude their passwords
+    const users = await User.find({}, '-password');
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+}
+
+export async function addUser(req, res) {
+  const { name, email, password, role } = req.body;
+  try {
+    let user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({ msg: 'User already exists' });
+    }
+    // Create new user instance (password will be hashed by pre-save hook in User model)
+    user = new User({ name, email, password, role });
+    await user.save();
+
+    // Return user data without the password
+    const { password: _, ...userResponse } = user.toObject();
+    res.status(201).json(userResponse);
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+}
+
+export async function updateUser(req, res) {
+  const { id } = req.params;
+  const { name, email, password, role } = req.body;
+
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Update fields
+    user.name = name || user.name;
+    user.email = email || user.email;
+    user.role = role || user.role;
+
+    // If a new password is provided, it will be hashed by the pre-save hook
+    if (password) {
+      user.password = password;
+    }
+
+    const updatedUser = await user.save();
+
+    const { password: _, ...userResponse } = updatedUser.toObject();
+    res.json(userResponse);
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+}
+
 export async function deleteUser(req, res) {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
