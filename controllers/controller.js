@@ -90,6 +90,17 @@ export async function storeResult(req, res) {
   }
 }
 
+export async function getResultsByUser(req, res) {
+  try {
+    const { userId } = req.params;
+    // Find results for the given user and populate the exam title
+    const results = await Results.find({ user: userId }).populate('exam', 'title');
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch results' });
+  }
+}
+
 export async function dropResult(req, res) {
   try {
     await Results.deleteMany();
