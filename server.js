@@ -4,16 +4,17 @@ config(); // Initialise dotenv first
 import express from "express";
 import morgan from "morgan";
 import cors from "cors";
-import router from "./router/route.js";
-import authRoute from "./router/authRoute.js";
+import router from "./router/route.js"; // <-- ONLY import the main, corrected router
 import connect from "./database/conn.js";
-import questionRoute from "./router/questionRoute.js";
 
 console.log("ATLAS_URI:", process.env.ATLAS_URI ? "✅ Loaded" : "❌ Not loaded");
 
 const app = express();
 
-/** ✅ Setup CORS */
+/** Middlewares */
+app.use(express.json());
+
+/** Setup CORS */
 const allowedOrigins = [
   "http://localhost:3000",
   "https://frolicking-quokka-e9d71f.netlify.app",
@@ -34,48 +35,29 @@ const corsOptions = {
   },
   credentials: true,
 };
-
-app.use(morgan("tiny"));
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(morgan("tiny"));
+app.disable("x-powered-by"); // Less hackers know about our stack
 
-/** ✅ API Routes */
+const port = process.env.PORT || 8080;
+
+/** API Routes */
+// This is the critical fix that makes all your API endpoints work correctly.
 app.use("/api", router);
-app.use("/api/auth", authRoute);
-app.use("/api/questions", questionRoute);
 
-/** ✅ Root route */
-app.get("/", (req, res) => {
-  try {
-    res.json("Get root request");
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/** ✅ Health check */
-app.get("/test", (req, res) => {
-  res.send("Test route works!");
-});
-
-/** ✅ Ping route (for CORS/frontend testing) */
-app.get("/api/ping", (req, res) => {
-  res.json({ msg: "pong" });
-});
-
-/** ✅ Start Server */
-const port = process.env.PORT || 8081;
-
+/** Start Server only when we have valid connection */
 connect()
   .then(() => {
     try {
       app.listen(port, () => {
-        console.log(`✅ Server running at http://localhost:${port}`);
+        console.log(`✅ Server connected to http://localhost:${port}`);
       });
     } catch (error) {
-      console.error("❌ Failed to start server:", error.message);
+      console.log("❌ Cannot connect to the server");
     }
   })
   .catch((error) => {
-    console.error("❌ MongoDB connection failed:", error.message);
+    console.log("❌ Invalid database connection...!");
+    console.error(error);
   });
+  
