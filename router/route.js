@@ -31,6 +31,8 @@ router.route('/results')
     .post(protect, controller.storeResult) // Private: Student submits a result
     .delete(protect, roleMiddleware('admin'), controller.dropResult); // Admin: Delete all results
 
+router.get('/results/user/:userId', protect, controller.getResultsByUser); // Private: Student gets their own results
+
 /** =================================== EXAM ROUTES =================================== */
 router.route('/exams')
     .get(controller.getAllExams) // Public
