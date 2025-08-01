@@ -9,51 +9,38 @@ config(); // Load environment variables at the very top
 
 const app = express();
 
-/** app middlewares */
-app.use(morgan('tiny'));
-app.use(express.json());
-
-// Define allowed origins
+// ✅ Fix 1: Define CORS config early
 const allowedOrigins = [
   'http://localhost:3000',
   'https://unrivaled-lamington-8daa84.netlify.app',
   'https://quiz-server-9.onrender.com'
 ];
 
-// CORS configuration
 const corsOptions = {
   origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD'],
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'] // ✅ Allow Authorization header
 };
 
-// Handle pre-flight requests and set CORS headers
-app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
+// ✅ Fix 2: Use CORS middleware first
 app.use(cors(corsOptions));
-console.log('CORS middleware configured successfully.');
+app.use(morgan('tiny'));
+app.use(express.json());
 
-/** api routes */
+// ✅ API routes
 app.use('/api', router);
 
 app.get('/', (req, res) => {
-  try {
-    res.json('Get Request');
-  } catch (error) {
-    res.json(error);
-  }
+  res.json('Get Request');
 });
 
-/** start server only when we have valid connection */
 const port = process.env.PORT || 8080;
 connect()
   .then(() => {
-    try {
-      app.listen(port, () => {
-        console.log(`Server connected to http://localhost:${port}`);
-      });
-    } catch (error) {
-      console.log('Cannot connect to the server');
-    }
+    app.listen(port, () => {
+      console.log(`Server connected to http://localhost:${port}`);
+    });
   })
   .catch((error) => {
     console.log('Invalid Database Connection...!');
