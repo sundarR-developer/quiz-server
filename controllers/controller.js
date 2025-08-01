@@ -78,15 +78,57 @@ export async function getResult(req, res) {
 
 export async function storeResult(req, res) {
   try {
-    const { username, result, attempts, points, achieved, exam } = req.body;
-    if (!username || result.length === 0) {
-      throw new Error("Data not provided!");
+    const { examId, userId, answers } = req.body;
+
+    if (!examId || !userId || !answers) {
+      return res.status(400).json({ error: 'Missing required fields.' });
     }
-    Results.create({ username, result, attempts, points, achieved, exam }).then(
-      res.json({ msg: "Result saved successfully!" })
-    );
+
+    // Fetch the exam and populate the questions to get the full question objects
+    const exam = await Exam.findById(examId).populate('questions');
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found.' });
+    }
+
+    const questions = exam.questions;
+    let score = 0;
+    const feedback = [];
+    const total = questions.length;
+
+    // Loop through each question to calculate the score and generate feedback
+    for (const question of questions) {
+      const userAnswer = answers[question._id];
+      const isCorrect = userAnswer !== undefined && userAnswer === question.answer;
+
+      if (isCorrect) {
+        score++;
+      }
+
+      feedback.push({
+        question: question.question,
+        options: question.options,
+        correctAnswer: question.answer,
+        userAnswer: userAnswer,
+        isCorrect: isCorrect,
+        explanation: question.explanation || '',
+      });
+    }
+
+    // Create and save the new result
+    const newResult = new Results({
+      exam: examId,
+      user: userId,
+      score,
+      total,
+      feedback,
+    });
+
+    await newResult.save();
+
+    res.status(201).json(newResult);
   } catch (error) {
-    res.json({ error });
+    console.error('Error storing result:', error);
+    res.status(500).json({ error: 'Failed to store result.' });
   }
 }
 
