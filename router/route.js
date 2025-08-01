@@ -22,7 +22,7 @@ router.route('/users/:id')
 /** =================================== QUESTION ROUTES =================================== */
 router.route('/questions')
     .get(controller.getQuestions) // Public
-    .post(protect, roleMiddleware('admin'), controller.storeQuestions) // Admin
+    .post(protect, roleMiddleware('admin'), controller.createQuestion) // Admin
     .delete(protect, roleMiddleware('admin'), controller.dropQuestions); // Admin
 
 /** =================================== RESULT ROUTES =================================== */
