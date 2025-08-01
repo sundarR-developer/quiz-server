@@ -34,11 +34,25 @@ export async function dropQuestions(req, res) {
   }
 }
 
-// Create a new question
+// Create a new question and add it to the exam
 export async function createQuestion(req, res) {
   try {
+    const { examId } = req.body;
+    if (!examId) {
+      return res.status(400).json({ error: 'Exam ID is required.' });
+    }
+
+    // 1. Create the new question
     const question = new Questions(req.body);
     await question.save();
+
+    // 2. Add the new question's ID to the exam's questions array
+    await Exam.findByIdAndUpdate(
+      examId,
+      { $push: { questions: question._id } },
+      { new: true }
+    );
+
     res.status(201).json(question);
   } catch (error) {
     res.status(400).json({ error: error.message });
