@@ -1,63 +1,65 @@
-import { config } from "dotenv";
-config(); // Initialise dotenv first
-
-import express from "express";
-import morgan from "morgan";
-import cors from "cors";
-import router from "./router/route.js"; // <-- ONLY import the main, corrected router
-import connect from "./database/conn.js";
-
-console.log("ATLAS_URI:", process.env.ATLAS_URI ? "✅ Loaded" : "❌ Not loaded");
+import express from 'express';
+import morgan from 'morgan';
+import cors from 'cors';
+import { config } from 'dotenv';
+import router from './router/route.js';
+import connect from './database/connection.js';
 
 const app = express();
 
-/** Middlewares */
-app.use(express.json());
+/** app middlewares */
+app.use(morgan('tiny'));
 
-/** Setup CORS */
+// Define allowed origins
 const allowedOrigins = [
-  "http://localhost:3000",
-  "https://frolicking-quokka-e9d71f.netlify.app",
-  "https://relaxed-travesseiro-8cc626.netlify.app",
-  "https://guileless-semolina-8b71cf.netlify.app",
-  "https://unrivaled-lamington-8daa84.netlify.app",
-  "http://localhost:8081"
+  'http://localhost:3000',
+  'https://unrivaled-lamington-8daa84.netlify.app'
 ];
 
+// CORS configuration
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.error("❌ Blocked by CORS:", origin);
-      callback(new Error("Not allowed by CORS"));
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
     }
+    return callback(null, true);
   },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD'],
   credentials: true,
 };
+
 app.use(cors(corsOptions));
-app.use(morgan("tiny"));
-app.disable("x-powered-by"); // Less hackers know about our stack
+console.log('CORS middleware configured successfully.');
+app.use(express.json());
+config();
 
+/** api routes */
+app.use('/api', router);
+
+app.get('/', (req, res) => {
+  try {
+    res.json('Get Request');
+  } catch (error) {
+    res.json(error);
+  }
+});
+
+/** start server only when we have valid connection */
 const port = process.env.PORT || 8080;
-
-/** API Routes */
-// This is the critical fix that makes all your API endpoints work correctly.
-app.use("/api", router);
-
-/** Start Server only when we have valid connection */
 connect()
   .then(() => {
     try {
       app.listen(port, () => {
-        console.log(`✅ Server connected to http://localhost:${port}`);
+        console.log(`Server connected to http://localhost:${port}`);
       });
     } catch (error) {
-      console.log("❌ Cannot connect to the server");
+      console.log('Cannot connect to the server');
     }
   })
   .catch((error) => {
-    console.log("❌ Invalid database connection...!");
-    console.error(error);
+    console.log('Invalid Database Connection...!');
+    console.log(error);
   });
-  
