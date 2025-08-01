@@ -25,6 +25,10 @@ router.route('/questions')
     .post(protect, roleMiddleware('admin'), controller.createQuestion) // Admin
     .delete(protect, roleMiddleware('admin'), controller.dropQuestions); // Admin
 
+router.route('/questions/:id')
+    .put(protect, roleMiddleware('admin'), controller.updateQuestion) // Admin
+    .delete(protect, roleMiddleware('admin'), controller.deleteQuestion); // Admin
+
 /** =================================== RESULT ROUTES =================================== */
 router.route('/results')
     .get(protect, roleMiddleware('admin'), controller.getResult) // Admin: Get all results
