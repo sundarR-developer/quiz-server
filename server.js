@@ -3,7 +3,7 @@ import morgan from 'morgan';
 import cors from 'cors';
 import { config } from 'dotenv';
 import router from './router/route.js';
-import connect from '../database/connection.js';
+import connect from './database/conn.js';
 
 const app = express();
 
