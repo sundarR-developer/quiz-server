@@ -392,4 +392,3 @@ export async function addQuestionsToExam(req, res) {
     res.status(400).json({ error: error.message });
   }
 }
-
