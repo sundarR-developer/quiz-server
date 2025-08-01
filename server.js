@@ -5,10 +5,13 @@ import { config } from 'dotenv';
 import router from './router/route.js';
 import connect from './database/conn.js';
 
+config(); // Load environment variables at the very top
+
 const app = express();
 
 /** app middlewares */
 app.use(morgan('tiny'));
+app.use(express.json());
 
 // Define allowed origins
 const allowedOrigins = [
@@ -31,10 +34,10 @@ const corsOptions = {
   credentials: true,
 };
 
+// Handle pre-flight requests and set CORS headers
+app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
 app.use(cors(corsOptions));
 console.log('CORS middleware configured successfully.');
-app.use(express.json());
-config();
 
 /** api routes */
 app.use('/api', router);
