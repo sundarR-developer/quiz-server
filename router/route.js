@@ -43,9 +43,12 @@ router.route('/exams')
     .post(protect, roleMiddleware('admin'), controller.createExam); // Admin
 
 router.route('/exams/:id')
-    .get(controller.getExamById) // Public
+    .get(controller.getExam) // Get a single exam
     .put(protect, roleMiddleware('admin'), controller.updateExam) // Admin
     .delete(protect, roleMiddleware('admin'), controller.deleteExam); // Admin
+
+router.route('/exams/:id/with-questions')
+    .get(controller.getExamWithQuestions);
 
 router.post('/exams/:id/assign', protect, roleMiddleware('admin'), controller.assignExamToStudents);
 router.put('/exams/:id/questions', protect, roleMiddleware('admin'), controller.addQuestionsToExam);
