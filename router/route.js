@@ -39,7 +39,7 @@ router.get('/results/user/:userId', protect, controller.getResultsByUser); // Pr
 
 /** =================================== EXAM ROUTES =================================== */
 router.route('/exams')
-    .get(controller.getAllExams) // Public
+    .get(controller.getExams) // Public
     .post(protect, roleMiddleware('admin'), controller.createExam); // Admin
 
 router.route('/exams/:id')
