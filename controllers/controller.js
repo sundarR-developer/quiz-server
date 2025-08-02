@@ -1,394 +1,264 @@
-import Questions from "../models/questionSchema.js";
-import Results from "../models/resultSchema.js";
+import Questions from '../models/questionSchema.js';
 import Exam from '../models/examSchema.js';
+import Results from '../models/resultSchema.js';
 import User from '../models/userSchema.js';
-import mongoose from 'mongoose';
 
 // --- Question Controllers ---
 
 export async function getQuestions(req, res) {
-  try {
-    const q = await Questions.find();
-    res.json(q);
-  } catch (error) {
-    res.json({ error });
-  }
+    try {
+        const q = await Questions.find();
+        res.json(q);
+    } catch (error) {
+        res.status(500).json({ error });
+    }
 }
 
-export async function storeQuestions(req, res) {
-  try {
-    Questions.insertMany(req.body.questions).then(
-      res.json({ msg: "Data saved successfully!" })
-    );
-  } catch (error) {
-    res.json({ error });
-  }
+export async function createQuestion(req, res) {
+    try {
+        const { examId, ...questionData } = req.body;
+        if (!examId) {
+            return res.status(400).json({ error: 'Exam ID is required.' });
+        }
+
+        const question = new Questions(questionData);
+        await question.save();
+
+        await Exam.findByIdAndUpdate(
+            examId,
+            { $push: { questions: question._id } },
+            { new: true }
+        );
+
+        res.status(201).json({ msg: "Question Created Successfully" });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
+export async function updateQuestion(req, res) {
+    try {
+        const { id } = req.params;
+        const questionData = req.body;
+        await Questions.updateOne({ _id: id }, questionData);
+        res.status(200).json({ msg: "Question Updated Successfully" });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
+export async function deleteQuestion(req, res) {
+    try {
+        const { id } = req.params;
+        await Questions.findByIdAndDelete(id);
+        res.status(200).json({ msg: "Question Deleted Successfully" });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
 }
 
 export async function dropQuestions(req, res) {
-  try {
-    await Questions.deleteMany();
-    res.json({ msg: "Questions deleted successfully!" });
-  } catch (error) {
-    res.json({ error });
-  }
-}
-
-// Create a new question and add it to the exam
-export async function createQuestion(req, res) {
-  try {
-    const { examId } = req.body;
-    if (!examId) {
-      return res.status(400).json({ error: 'Exam ID is required.' });
+    try {
+        await Questions.deleteMany();
+        res.json({ msg: "All Questions Deleted Successfully" });
+    } catch (error) {
+        res.status(500).json({ error });
     }
-
-    // 1. Create the new question
-    const question = new Questions(req.body);
-    await question.save();
-
-    // 2. Add the new question's ID to the exam's questions array
-    await Exam.findByIdAndUpdate(
-      examId,
-      { $push: { questions: question._id } },
-      { new: true }
-    );
-
-    res.status(201).json(question);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-}
-
-// Update a question and handle moving it between exams
-export async function updateQuestion(req, res) {
-  try {
-    const { id } = req.params;
-    const { examId, ...questionData } = req.body;
-
-    // Find the original question to see if the exam is changing
-    const originalQuestion = await Questions.findById(id);
-    if (!originalQuestion) {
-      return res.status(404).json({ message: 'Question not found' });
-    }
-
-    const oldExamId = originalQuestion.examId;
-
-    // If the exam ID has changed, we need to update both exams
-    if (examId && oldExamId.toString() !== examId.toString()) {
-      // Remove question from the old exam's list
-      await Exam.findByIdAndUpdate(oldExamId, { $pull: { questions: id } });
-
-      // Add question to the new exam's list
-      await Exam.findByIdAndUpdate(examId, { $push: { questions: id } });
-    }
-
-    // Update the question itself
-    const updatedQuestion = await Questions.findByIdAndUpdate(
-      id,
-      { ...questionData, examId },
-      { new: true }
-    );
-
-    res.status(200).json(updatedQuestion);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-}
-
-// Delete a question
-export async function deleteQuestion(req, res) {
-  try {
-    await Questions.findByIdAndDelete(req.params.id);
-    res.status(204).send();
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-}
-
-// Get a single exam with all its questions populated
-export async function getExamWithQuestions(req, res) {
-  try {
-    const { id } = req.params;
-    // Use .populate() to replace the question IDs with the full question documents
-    const exam = await Exam.findById(id).populate('questions');
-    if (!exam) {
-      return res.status(404).json({ message: 'Exam not found' });
-    }
-    res.status(200).json(exam);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 }
 
 // --- Exam Controllers ---
 
-// Get all exams
-export async function getExams(req, res) {
-  try {
-    const exams = await Exam.find({}, '-questions'); // Exclude questions for performance
-    res.json(exams);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-
-// Get a single exam
-export async function getExam(req, res) {
-  try {
-    const exam = await Exam.findById(req.params.id);
-    if (!exam) {
-        return res.status(404).json({ message: 'Exam not found' });
+export async function createExam(req, res) {
+    try {
+        const exam = new Exam(req.body);
+        await exam.save();
+        res.status(201).json(exam);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
-    res.json(exam);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 }
 
+export async function getExams(req, res) {
+    try {
+        const exams = await Exam.find();
+        res.json(exams);
+    } catch (error) {
+        res.status(500).json({ error });
+    }
+}
 
+export async function getExam(req, res) {
+    try {
+        const { id } = req.params;
+        const exam = await Exam.findById(id);
+        res.json(exam);
+    } catch (error) {
+        res.status(500).json({ error });
+    }
+}
 
-// Add questions to an exam
+export async function updateExam(req, res) {
+    try {
+        const { id } = req.params;
+        await Exam.updateOne({ _id: id }, req.body);
+        res.status(200).json({ msg: "Exam Updated Successfully" });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
+export async function deleteExam(req, res) {
+    try {
+        const { id } = req.params;
+        await Exam.findByIdAndDelete(id);
+        res.status(200).json({ msg: "Exam Deleted Successfully" });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
 export async function addQuestionsToExam(req, res) {
     try {
+        const { id } = req.params;
         const { questionIds } = req.body;
-        const exam = await Exam.findByIdAndUpdate(
-            req.params.id,
-            { $set: { questions: questionIds } },
-            { new: true }
-        );
-        res.status(200).json(exam);
+        await Exam.findByIdAndUpdate(id, { $addToSet: { questions: { $each: questionIds } } });
+        res.status(200).json({ msg: "Questions Added Successfully" });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
+export async function getExamWithQuestions(req, res) {
+    try {
+        const { id } = req.params;
+        const exam = await Exam.findById(id).populate('questions');
+        res.json(exam);
+    } catch (error) {
+        res.status(500).json({ error });
+    }
+}
+
+export async function assignExamToStudents(req, res) {
+    try {
+        const { id } = req.params;
+        const { studentIds } = req.body;
+        await Exam.findByIdAndUpdate(id, { $addToSet: { assignedTo: { $each: studentIds } } });
+        res.status(200).json({ msg: "Exam Assigned Successfully" });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
 }
 
 
-
-// Get exams assigned to a student
-export async function getAssignedExams(userId) {
-    try {
-        const exams = await Exam.find({ assignedTo: userId });
-        return exams;
-    } catch (error) {
-        console.error('Error fetching assigned exams:', error);
-        throw new Error('Failed to fetch assigned exams');
-    }
-}
-
-
-
 // --- Result Controllers ---
 
-export async function getResult(req, res) {
-  try {
-    const r = await Results.find();
-    res.json(r);
-  } catch (error) {
-    res.json({ error });
-  }
+export async function getResults(req, res) {
+    try {
+        const r = await Results.find().populate('user', 'name email').populate('exam', 'name');
+        res.json(r);
+    } catch (error) {
+        res.status(500).json({ error });
+    }
 }
 
 export async function storeResult(req, res) {
-  try {
-    const { examId, userId, answers } = req.body;
-
-    if (!examId || !userId || !answers) {
-      return res.status(400).json({ error: 'Missing required fields.' });
+    try {
+        const { userId } = req.user;
+        const { examId, score, answers } = req.body;
+        const result = new Results({ user: userId, exam: examId, score, answers });
+        await result.save();
+        res.status(201).json({ msg: "Result Saved Successfully" });
+    } catch (error) {
+        res.status(500).json({ error });
     }
+}
 
-    // Fetch the exam and populate the questions to get the full question objects
-    const exam = await Exam.findById(examId).populate('questions');
-    if (!exam) {
-      return res.status(404).json({ error: 'Exam not found.' });
+export async function dropResults(req, res) {
+    try {
+        await Results.deleteMany();
+        res.json({ msg: "All Results Deleted Successfully" });
+    } catch (error) {
+        res.status(500).json({ error });
     }
-
-    const questions = exam.questions;
-    let score = 0;
-    const feedback = [];
-    const total = questions.length;
-
-    // Loop through each question to calculate the score and generate feedback
-    for (const question of questions) {
-      const userAnswer = answers[question._id];
-      const isCorrect = userAnswer !== undefined && userAnswer === question.answer;
-
-      if (isCorrect) {
-        score++;
-      }
-
-      feedback.push({
-        question: question.question,
-        options: question.options,
-        correctAnswer: question.answer,
-        userAnswer: userAnswer,
-        isCorrect: isCorrect,
-        explanation: question.explanation || '',
-      });
-    }
-
-    // Create and save the new result
-    const newResult = new Results({
-      exam: examId,
-      user: userId,
-      score,
-      total,
-      feedback,
-    });
-
-    await newResult.save();
-
-    res.status(201).json(newResult);
-  } catch (error) {
-    console.error('Error storing result:', error);
-    res.status(500).json({ error: 'Failed to store result.' });
-  }
 }
 
 export async function getResultsByUser(req, res) {
-  try {
-    const { userId } = req.params;
-    // Find results for the given user and populate the exam title
-    const results = await Results.find({ user: userId }).populate('exam', 'title');
-    res.json(results);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch results' });
-  }
-}
-
-export async function dropResult(req, res) {
-  try {
-    await Results.deleteMany();
-    res.json({ msg: "Results deleted successfully!" });
-  } catch (error) {
-    res.json({ error });
-  }
-}
-
-
-
-// --- Analysis Controller ---
-
-export async function getExamResultAnalysis(req, res) {
-  try {
-    const { id: examId } = req.params;
-    const results = await Results.find({ exam: examId }).populate('user', 'name email');
-    console.log('Populated results users:', results.map(r => r.user));
-
-    if (results.length === 0) {
-      return res.status(200).json({
-        message: "No results found for this exam yet.",
-        participantCount: 0,
-        averageScore: 0,
-        highestScore: 0,
-        lowestScore: 0,
-      });
+    try {
+        const { userId } = req.params;
+        const results = await Results.find({ user: userId }).populate('exam', 'name');
+        res.json(results);
+    } catch (error) {
+        res.status(500).json({ error });
     }
-
-    const participantCount = results.length;
-    const scores = results.map(r => Number(r.score)).filter(score => !isNaN(score));
-    console.log('Raw results:', results);
-    console.log('Scores for analysis:', scores);
-    const totalPoints = scores.reduce((acc, score) => acc + score, 0);
-    console.log('Total points:', totalPoints, 'Scores length:', scores.length);
-    const averageScore = scores.length > 0 ? totalPoints / scores.length : null;
-    const highestScore = scores.length > 0 ? Math.max(...scores) : null;
-    const lowestScore = scores.length > 0 ? Math.min(...scores) : null;
-    console.log('Type of scores:', scores.map(s => typeof s));
-    console.log('Average score before formatting:', averageScore);
-
-    res.status(200).json({
-      participantCount,
-      averageScore: (averageScore !== null && !isNaN(averageScore)) ? Number(averageScore.toFixed(2)) : null,
-      highestScore: (highestScore !== null && !isNaN(highestScore)) ? highestScore : null,
-      lowestScore: (lowestScore !== null && !isNaN(lowestScore)) ? lowestScore : null,
-      rawResults: results,
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 }
 
-// --- User Management ---
+// --- User Management Controllers (Admin Only) ---
 
 export async function getUsers(req, res) {
-  try {
-    // Fetch all users but exclude their passwords
-    const users = await User.find({}, '-password');
-    res.json(users);
-  } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
-  }
+    try {
+        const users = await User.find({}, '-password'); // Exclude passwords from the result
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 }
 
 export async function addUser(req, res) {
-  const { name, email, password, role } = req.body;
-  try {
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ msg: 'User already exists' });
+    try {
+        const { name, email, password, role } = req.body;
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'User with this email already exists' });
+        }
+        const user = new User({ name, email, password, role });
+        await user.save();
+        res.status(201).json({ msg: "User added successfully", userId: user._id });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
-    // Create new user instance (password will be hashed by pre-save hook in User model)
-    user = new User({ name, email, password, role });
-    await user.save();
-
-    // Return user data without the password
-    const { password: _, ...userResponse } = user.toObject();
-    res.status(201).json(userResponse);
-  } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
-  }
 }
 
 export async function updateUser(req, res) {
-  const { id } = req.params;
-  const { name, email, password, role } = req.body;
-
-  try {
-    const user = await User.findById(id);
-    if (!user) {
-      return res.status(404).json({ msg: 'User not found' });
+    try {
+        const { id } = req.params;
+        await User.findByIdAndUpdate(id, req.body);
+        res.status(200).json({ msg: "User updated successfully" });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
     }
-
-    // Update fields
-    user.name = name || user.name;
-    user.email = email || user.email;
-    user.role = role || user.role;
-
-    // If a new password is provided, it will be hashed by the pre-save hook
-    if (password) {
-      user.password = password;
-    }
-
-    const updatedUser = await user.save();
-
-    const { password: _, ...userResponse } = updatedUser.toObject();
-    res.json(userResponse);
-  } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
-  }
 }
 
 export async function deleteUser(req, res) {
-  try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) return res.status(404).json({ msg: 'User not found' });
-    res.json({ msg: 'User deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ msg: 'Server error' });
-  }
+    try {
+        const { id } = req.params;
+        await User.findByIdAndDelete(id);
+        res.status(200).json({ msg: "User deleted successfully" });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
 }
 
-// --- Proctor Action (placeholder) ---
+export async function getExamResultAnalysis(req, res) {
+    try {
+        const { id: examId } = req.params;
+        const results = await Results.find({ exam: examId });
+        if (results.length === 0) {
+            return res.status(200).json({ message: "No results found for this exam yet." });
+        }
+        const participantCount = results.length;
+        const totalScore = results.reduce((sum, r) => sum + r.score, 0);
+        const averageScore = totalScore / participantCount;
+        const highestScore = Math.max(...results.map(r => r.score));
+        const lowestScore = Math.min(...results.map(r => r.score));
 
-export async function proctorAction(req, res) {
-  res.json({ msg: 'Proctor action performed', user: req.user });
-}
-
-export function testFunction(req, res) {
-  res.send('Test function works!');
-}
-
-export function someFunction(req, res) {
-  res.send('It works!');
+        res.status(200).json({
+            participantCount,
+            averageScore,
+            highestScore,
+            lowestScore,
+            results
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 }
