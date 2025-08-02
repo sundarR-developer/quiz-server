@@ -59,11 +59,37 @@ export async function createQuestion(req, res) {
   }
 }
 
-// Update a question
+// Update a question and handle moving it between exams
 export async function updateQuestion(req, res) {
   try {
-    const updated = await Questions.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.status(200).json(updated);
+    const { id } = req.params;
+    const { examId, ...questionData } = req.body;
+
+    // Find the original question to see if the exam is changing
+    const originalQuestion = await Questions.findById(id);
+    if (!originalQuestion) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    const oldExamId = originalQuestion.examId;
+
+    // If the exam ID has changed, we need to update both exams
+    if (examId && oldExamId.toString() !== examId.toString()) {
+      // Remove question from the old exam's list
+      await Exam.findByIdAndUpdate(oldExamId, { $pull: { questions: id } });
+
+      // Add question to the new exam's list
+      await Exam.findByIdAndUpdate(examId, { $push: { questions: id } });
+    }
+
+    // Update the question itself
+    const updatedQuestion = await Questions.findByIdAndUpdate(
+      id,
+      { ...questionData, examId },
+      { new: true }
+    );
+
+    res.status(200).json(updatedQuestion);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
