@@ -1,5 +1,3 @@
-// server/models/questionSchema.js
-
 import mongoose from 'mongoose';
 
 const questionSchema = new mongoose.Schema({
