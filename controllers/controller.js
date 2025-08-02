@@ -281,62 +281,7 @@ export async function dropResult(req, res) {
   }
 }
 
-// --- Exam Controllers ---
 
-export async function createExam(req, res) {
-  try {
-    const exam = new Exam(req.body);
-    await exam.save();
-    res.status(201).json(exam);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-}
-
-export async function getAllExams(req, res) {
-  try {
-    const exams = await Exam.find().populate('questions');
-    res.status(200).json(exams);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-
-export async function getExamById(req, res) {
-  try {
-    const exam = await Exam.findById(req.params.id).populate('questions');
-    if (!exam) {
-      return res.status(404).json({ message: 'Exam not found' });
-    }
-    res.status(200).json(exam);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-
-export async function updateExam(req, res) {
-  try {
-    const exam = await Exam.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-    if (!exam) {
-      return res.status(404).json({ message: 'Exam not found' });
-    }
-    res.status(200).json(exam);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-}
-
-export async function deleteExam(req, res) {
-  try {
-    const exam = await Exam.findByIdAndDelete(req.params.id);
-    if (!exam) {
-      return res.status(404).json({ message: 'Exam not found' });
-    }
-    res.status(200).json({ message: 'Exam deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
 
 // --- Analysis Controller ---
 
