@@ -2,6 +2,15 @@ import User from '../models/userSchema.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
+// Middleware to set up local variables for OTP
+export function localVariables(req, res, next) {
+    req.app.locals = {
+        OTP: null,
+        resetSession: false
+    };
+    next();
+}
+
 export async function register(req, res) {
   const { name, email, password, role } = req.body;
   try {
