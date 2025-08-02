@@ -8,16 +8,16 @@ import protect from '../middleware/authMiddleware.js';
 import roleMiddleware from '../middleware/roleMiddleware.js';
 
 // --- User & Authentication Routes ---
-router.post('/register', authController.register); // Register a new user
-router.post('/login', authController.login); // Login a user
-router.post('/authenticate', authController.verifyUser, (req, res) => res.end()); // Authenticate user
+router.post('/auth/register', authController.register); // Register a new user
+router.post('/auth/login', authController.login); // Login a user
+router.post('/auth/authenticate', authController.verifyUser, (req, res) => res.end()); // Authenticate user
 router.get('/user/:username', authController.getUser); // Get user by username
 
 // --- Password & OTP Routes ---
-router.get('/generateOTP', authController.verifyUser, authController.localVariables, authController.generateOTP); // Generate random OTP
-router.get('/verifyOTP', authController.verifyUser, authController.verifyOTP); // Verify generated OTP
-router.get('/createResetSession', authController.createResetSession); // Reset all variables
-router.put('/resetPassword', authController.verifyUser, authController.resetPassword); // Reset password
+router.get('/auth/generateOTP', authController.verifyUser, authController.localVariables, authController.generateOTP); // Generate random OTP
+router.get('/auth/verifyOTP', authController.verifyUser, authController.verifyOTP); // Verify generated OTP
+router.get('/auth/createResetSession', authController.createResetSession); // Reset all variables
+router.put('/auth/resetPassword', authController.verifyUser, authController.resetPassword); // Reset password
 
 // --- Question Routes ---
 router.route('/questions')
