@@ -57,6 +57,12 @@ app.get("/test", (req, res) => {
   res.send("Test route works!");
 });
 
+// ✅ Global Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack); // Log the error stack for debugging
+  res.status(500).send('Something broke!');
+});
+
 /** Connect to MongoDB and Start Server */
 const port = process.env.PORT || 8081;
 

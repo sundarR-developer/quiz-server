@@ -102,6 +102,12 @@ export async function dropResult(req, res) {
 export async function getResultsByUser(req, res) {
   try {
     const { userId } = req.params;
+
+    // Security Check: Ensure user is admin or is requesting their own results
+    if (req.user.id !== userId && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden: You are not authorized to view these results.' });
+    }
+
     const results = await Results.find({ user: userId }).populate('exam', 'name');
     res.json(results);
   } catch (error) {
@@ -252,8 +258,14 @@ export const assignExamToStudents = async (req, res) => {
   }
 };
 
-export async function getAssignedExams(userId) {
-  return await Exam.find({ assignedTo: new mongoose.Types.ObjectId(userId) });
+export async function getMyAssignedExams(req, res) {
+    try {
+        const exams = await Exam.find({ assignedTo: req.user.id });
+        res.json(exams);
+    } catch (err) {
+        console.error('Error in getMyAssignedExams:', err);
+        res.status(500).json({ msg: 'Error fetching assigned exams' });
+    }
 }
 
 export async function addQuestionsToExam(req, res) {

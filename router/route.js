@@ -6,11 +6,7 @@ import roleMiddleware from '../middleware/roleMiddleware.js';
 
 const router = Router();
 
-/** =================================== AUTH ROUTES =================================== */
-router.post('/auth/register', authController.register);
-router.post('/auth/login', authController.login);
-
-/** =================================== USER ROUTES (Admin Only) =================================== */
+// =================================== USER ROUTES (Admin Only) ===================================
 router.route('/users')
     .get(protect, roleMiddleware('admin'), authController.getAllUsers)
     .post(protect, roleMiddleware('admin'), authController.createUser);
@@ -19,50 +15,32 @@ router.route('/users/:id')
     .put(protect, roleMiddleware('admin'), authController.updateUser)
     .delete(protect, roleMiddleware('admin'), authController.deleteUser);
 
-/** =================================== QUESTION ROUTES =================================== */
-router.route('/questions')
-    .get(controller.getQuestions) // Public
-    .post(protect, roleMiddleware('admin'), controller.createQuestion) // Admin
-    .delete(protect, roleMiddleware('admin'), controller.dropQuestions); // Admin
-
-router.route('/questions/:id')
-    .put(protect, roleMiddleware('admin'), controller.updateQuestion) // Admin
-    .delete(protect, roleMiddleware('admin'), controller.deleteQuestion); // Admin
-
-/** =================================== RESULT ROUTES =================================== */
+// =================================== RESULT ROUTES ===================================
 router.route('/results')
-    .get(protect, roleMiddleware('admin'), controller.getResult) // Admin: Get all results
-    .post(protect, controller.storeResult) // Private: Student submits a result
-    .delete(protect, roleMiddleware('admin'), controller.dropResult); // Admin: Delete all results
+    .get(protect, roleMiddleware('admin'), controller.getResult)
+    .post(protect, controller.storeResult)
+    .delete(protect, roleMiddleware('admin'), controller.dropResult);
 
-router.get('/results/user/:userId', protect, controller.getResultsByUser); // Private: Student gets their own results
+// This route should have additional checks in the controller to ensure a user can only see their own results
+router.get('/results/user/:userId', protect, controller.getResultsByUser);
 
-/** =================================== EXAM ROUTES =================================== */
+// =================================== EXAM ROUTES ===================================
 router.route('/exams')
-    .get(controller.getAllExams) // Public
-    .post(protect, roleMiddleware('admin'), controller.createExam); // Admin
+    .get(controller.getAllExams)
+    .post(protect, roleMiddleware('admin'), controller.createExam);
 
 router.route('/exams/:id')
-    .get(controller.getExamById) // Public
-    .put(protect, roleMiddleware('admin'), controller.updateExam) // Admin
-    .delete(protect, roleMiddleware('admin'), controller.deleteExam); // Admin
+    .get(controller.getExamById)
+    .put(protect, roleMiddleware('admin'), controller.updateExam)
+    .delete(protect, roleMiddleware('admin'), controller.deleteExam);
 
 router.post('/exams/:id/assign', protect, roleMiddleware('admin'), controller.assignExamToStudents);
 router.put('/exams/:id/questions', protect, roleMiddleware('admin'), controller.addQuestionsToExam);
 
-router.route('/exams/:id/analysis')
-    .get(protect, roleMiddleware('admin'), controller.getExamResultAnalysis); // Admin
+router.get('/exams/:id/analysis', protect, roleMiddleware('admin'), controller.getExamResultAnalysis);
 
-/** =================================== STUDENT-SPECIFIC ROUTES =================================== */
-router.get('/my-exams', protect, async (req, res) => {
-    try {
-        // The controller function is a helper, not a route handler, so we wrap it.
-        const exams = await controller.getAssignedExams(req.user.id);
-        res.json(exams);
-    } catch (err) {
-        console.error('Error in /api/my-exams:', err);
-        res.status(500).json({ msg: 'Error fetching assigned exams' });
-    }
-});
+// =================================== STUDENT-SPECIFIC ROUTES ===================================
+// The logic for this has been moved to the getMyAssignedExams controller function
+router.get('/my-exams', protect, controller.getMyAssignedExams);
 
 export default router;
