@@ -192,34 +192,7 @@ export async function getAssignedExams(userId) {
     }
 }
 
-// Get result analysis for an exam
-export async function getExamResultAnalysis(req, res) {
-    try {
-        const { id } = req.params;
-        const results = await Results.find({ exam: id }).populate('user', 'name');
 
-        if (!results || results.length === 0) {
-            return res.status(404).json({ message: 'No results found for this exam.' });
-        }
-
-        const analysis = {
-            totalSubmissions: results.length,
-            averageScore: results.reduce((acc, r) => acc + r.score, 0) / results.length,
-            highestScore: Math.max(...results.map(r => r.score)),
-            lowestScore: Math.min(...results.map(r => r.score)),
-            submissions: results.map(r => ({
-                studentName: r.user.name,
-                score: r.score,
-                total: r.total,
-                submittedAt: r.createdAt
-            }))
-        };
-
-        res.json(analysis);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-}
 
 // --- Result Controllers ---
 
