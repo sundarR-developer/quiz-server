@@ -4,7 +4,8 @@ const router = Router();
 /** Import all controllers */
 import * as controller from '../controllers/controller.js';
 import * as authController from '../controllers/authController.js';
-import { Auth, localVariables, protect, roleMiddleware } from '../middleware/auth.js';
+import protect from '../middleware/authMiddleware.js';
+import roleMiddleware from '../middleware/roleMiddleware.js';
 
 // --- User & Authentication Routes ---
 router.post('/register', authController.register); // Register a new user
@@ -13,7 +14,7 @@ router.post('/authenticate', authController.verifyUser, (req, res) => res.end())
 router.get('/user/:username', authController.getUser); // Get user by username
 
 // --- Password & OTP Routes ---
-router.get('/generateOTP', authController.verifyUser, localVariables, authController.generateOTP); // Generate random OTP
+router.get('/generateOTP', authController.verifyUser, authController.localVariables, authController.generateOTP); // Generate random OTP
 router.get('/verifyOTP', authController.verifyUser, authController.verifyOTP); // Verify generated OTP
 router.get('/createResetSession', authController.createResetSession); // Reset all variables
 router.put('/resetPassword', authController.verifyUser, authController.resetPassword); // Reset password
@@ -44,9 +45,9 @@ router.put('/exams/:id/assign', protect, roleMiddleware('admin', 'proctor'), con
 
 // --- Result & Analysis Routes ---
 router.route('/results')
-    .get(controller.getResult) // GET all results
+    .get(controller.getResults) // GET all results
     .post(protect, controller.storeResult) // POST a new result
-    .delete(protect, roleMiddleware('admin'), controller.dropResult); // DELETE all results
+    .delete(protect, roleMiddleware('admin'), controller.dropResults); // DELETE all results
 
 router.get('/results/:userId', protect, controller.getResultsByUser); // GET results for a specific user
 router.get('/results/analysis/:id', protect, roleMiddleware('admin', 'proctor'), controller.getExamResultAnalysis); // GET analysis for an exam
