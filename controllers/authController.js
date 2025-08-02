@@ -10,16 +10,7 @@ export async function register(req, res) {
 
     user = new User({ name, email, password, role });
     await user.save();
-        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.status(201).json({
-      token,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
-    });
+    res.status(201).json({ msg: 'Registration successful' });
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
@@ -31,14 +22,9 @@ export async function login(req, res) {
     const user = await User.findOne({ email });
     console.log('User found:', user);
     if (!user) return res.status(400).json({ msg: 'Invalid credentials' });
-    const isMatch = await user.matchPassword(password);
+    const isMatch = await bcrypt.compare(password, user.password);
     console.log('Password match:', isMatch);
     if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
-
-    if (!process.env.JWT_SECRET) {
-      console.error('FATAL ERROR: JWT_SECRET is not defined.');
-      return res.status(500).json({ msg: 'Server configuration error: JWT secret missing.' });
-    }
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token, user: { _id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
@@ -73,21 +59,15 @@ export async function createUser(req, res) {
 // Edit user
 export async function updateUser(req, res) {
   try {
-    const { name, email, role, password } = req.body;
-
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ msg: 'User not found' });
-
-    user.name = name || user.name;
-    user.email = email || user.email;
-    user.role = role || user.role;
-    if (password) {
-      user.password = password;
+    const { name, email, role } = req.body;
+    const update = { name, email, role };
+    if (req.body.password) {
+      const bcrypt = (await import('bcryptjs')).default;
+      update.password = await bcrypt.hash(req.body.password, 10);
     }
-
-    const updatedUser = await user.save();
-
-    res.json({ msg: 'User updated', user: updatedUser });
+    const user = await User.findByIdAndUpdate(req.params.id, update, { new: true });
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    res.json({ msg: 'User updated', user });
   } catch (err) {
     res.status(500).json({ msg: 'Server error' });
   }
