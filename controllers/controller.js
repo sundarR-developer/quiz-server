@@ -145,16 +145,7 @@ export async function getExam(req, res) {
   }
 }
 
-// Create a new exam
-export async function createExam(req, res) {
-  try {
-    const exam = new Exam(req.body);
-    await exam.save();
-    res.status(201).json(exam);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-}
+
 
 // Update an exam
 export async function updateExam(req, res) {
