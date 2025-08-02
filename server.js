@@ -1,42 +1,75 @@
-import express from 'express';
-import morgan from 'morgan';
-import cors from 'cors';
-import { config } from 'dotenv';
-import mongoose from 'mongoose';
-import router from './router/route.js';
+import { config } from "dotenv";
+config(); // Initialise dotenv first
 
-config();
+import express from "express";
+import morgan from "morgan";
+import cors from "cors";
+import router from "./router/route.js";
+import authRoute from "./router/authRoute.js";
+import connect from "./database/conn.js";
+import questionRoute from "./router/questionRoute.js";
+
+// Debug: Check if environment variable is loaded
+console.log("ATLAS_URI:", process.env.ATLAS_URI ? "Loaded" : "Not loaded");
 
 const app = express();
 
-// Middleware
-app.use(morgan('tiny'));
-app.use(cors({
-    origin: ["http://localhost:3000", "https://unrivaled-lamington-8daa84.netlify.app"],
-    credentials: true,
-}));
+/** ✅ Setup CORS */
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://frolicking-quokka-e9d71f.netlify.app",
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+};
+
+// ✅ Middleware
+app.use(morgan("tiny"));
+app.use(cors(corsOptions));
 app.use(express.json());
-app.disable('x-powered-by'); // Less hackers know about our stack
 
-const PORT = process.env.PORT || 8080;
+/** Routes */
+app.use("/api", router);
+app.use("/api/auth", authRoute);
+app.use("/api/questions", questionRoute);
 
-// API Routes
-app.use('/api', router);
-
-// Home Route
-app.get('/', (req, res) => {
-    res.status(201).json("Home GET Request");
+// Root route
+app.get("/", (req, res) => {
+  try {
+    res.json("Get root request");
+  } catch (error) {
+    res.json(error.message);
+  }
 });
 
-// Start server only when we have a valid connection
-mongoose.connect(process.env.ATLAS_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => {
-        console.log("Database Connected");
-        app.listen(PORT, () => {
-            console.log(`Server is running on http://localhost:${PORT}`);
-        });
-    })
-    .catch(error => {
-        console.log("Invalid Database Connection...!");
-        console.error(error);
-    });
+// Health check route
+app.get("/test", (req, res) => {
+  res.send("Test route works!");
+});
+
+/** Connect to MongoDB and Start Server */
+const port = process.env.PORT || 8081;
+
+connect()
+  .then(() => {
+    try {
+      app.listen(port, () => {
+        console.log(`Server connected to http://localhost:${port}`);
+      });
+    } catch (error) {
+      console.log("Cannot connect to server");
+    }
+  })
+  .catch((error) => {
+    console.log("Invalid database connection");
+  });
+
+
