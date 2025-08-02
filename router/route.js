@@ -1,86 +1,68 @@
-import express from 'express';
+import { Router } from 'express';
+import * as controller from '../controllers/controller.js';
 import * as authController from '../controllers/authController.js';
-import * as mainController from '../controllers/controller.js';
-import authMiddleware from '../middleware/authMiddleware.js';
+import protect from '../middleware/authMiddleware.js';
 import roleMiddleware from '../middleware/roleMiddleware.js';
-import Exam from '../models/examSchema.js';
-import { submitResult, getStudentResults } from '../controllers/resultsController.js';
-import { testFunc } from '../controllers/test.js';
-import { getQuestions, addQuestion, updateQuestion, deleteQuestion } from '../controllers/questionController.js';
-console.log("submitResult:", submitResult);
-console.log("testFunc:", testFunc);
-console.log("mainController.createQuestion:", mainController.createQuestion);
-console.log("mainController.createExam:", mainController.createExam);
 
-const router = express.Router();
+const router = Router();
 
-/* Questions routes API */
-// router.get("/questions", controller.getQuestions);
-// router.post("/questions", controller.storeQuestions);
-// chaining technique equivalent to above
+/** =================================== AUTH ROUTES =================================== */
+router.post('/auth/register', authController.register);
+router.post('/auth/login', authController.login);
 
-router.post('/questions', mainController.createQuestion);
-router.get('/questions', mainController.getQuestions);
-router.put('/questions/:id', mainController.updateQuestion);
-router.delete('/questions/:id', mainController.deleteQuestion);
+/** =================================== USER ROUTES (Admin Only) =================================== */
+router.route('/users')
+    .get(protect, roleMiddleware('admin'), authController.getAllUsers)
+    .post(protect, roleMiddleware('admin'), authController.createUser);
 
-/** Exam Routes */
-// Public: Get all exams, get exam by id
-router.route('/exams').get(mainController.getAllExams);
-router.route('/exams/:id').get(mainController.getExamById);
-router.route('/exams/:id/analysis').get(mainController.getExamResultAnalysis);
-// Protected: Create, update, delete exams (admin only)
-router.post('/exams', authMiddleware, roleMiddleware('admin'), mainController.createExam);
-router.get('/exams', mainController.getAllExams);
-router.get('/exams/:id', mainController.getExamById);
-router.put('/exams/:id', authMiddleware, roleMiddleware('admin'), mainController.updateExam);
-router.delete('/exams/:id', authMiddleware, roleMiddleware('admin'), mainController.deleteExam);
+router.route('/users/:id')
+    .put(protect, roleMiddleware('admin'), authController.updateUser)
+    .delete(protect, roleMiddleware('admin'), authController.deleteUser);
 
-// Results
-router.route('/result')
-  .get(mainController.getResult)
-  .post(submitResult)
-  .delete(mainController.dropResult);
+/** =================================== QUESTION ROUTES =================================== */
+router.route('/questions')
+    .get(controller.getQuestions) // Public
+    .post(protect, roleMiddleware('admin'), controller.createQuestion) // Admin
+    .delete(protect, roleMiddleware('admin'), controller.dropQuestions); // Admin
 
-// Protected: View all results (for admins/proctors)
-router.get('/results', authMiddleware, mainController.getResult);
-router.get('/results/:userId', getStudentResults);
+router.route('/questions/:id')
+    .put(protect, roleMiddleware('admin'), controller.updateQuestion) // Admin
+    .delete(protect, roleMiddleware('admin'), controller.deleteQuestion); // Admin
 
-// User management (admin only)
-router.put('/users/:id', authMiddleware, roleMiddleware('admin'), authController.updateUser);
-router.delete('/users/:id', authMiddleware, roleMiddleware('admin'), authController.deleteUser);
-router.post('/users', authMiddleware, roleMiddleware('admin'), authController.createUser);
-router.get('/users', authMiddleware, roleMiddleware('admin'), authController.getAllUsers);
+/** =================================== RESULT ROUTES =================================== */
+router.route('/results')
+    .get(protect, roleMiddleware('admin'), controller.getResult) // Admin: Get all results
+    .post(protect, controller.storeResult) // Private: Student submits a result
+    .delete(protect, roleMiddleware('admin'), controller.dropResult); // Admin: Delete all results
 
-// Add a route to get only students
-router.get('/students', authMiddleware, roleMiddleware('admin'), authController.getAllStudents);
+router.get('/results/user/:userId', protect, controller.getResultsByUser); // Private: Student gets their own results
 
-// Proctor-specific action
-router.post('/proctor-action', authMiddleware, roleMiddleware('proctor'), mainController.proctorAction);
+/** =================================== EXAM ROUTES =================================== */
+router.route('/exams')
+    .get(controller.getAllExams) // Public
+    .post(protect, roleMiddleware('admin'), controller.createExam); // Admin
 
-// Test route
-router.get('/test', mainController.testFunction);
+router.route('/exams/:id')
+    .get(controller.getExamById) // Public
+    .put(protect, roleMiddleware('admin'), controller.updateExam) // Admin
+    .delete(protect, roleMiddleware('admin'), controller.deleteExam); // Admin
 
-// Assign students to an exam (admin only)
-router.post('/exams/:id/assign', authMiddleware, roleMiddleware('admin'), mainController.assignExamToStudents);
+router.post('/exams/:id/assign', protect, roleMiddleware('admin'), controller.assignExamToStudents);
+router.put('/exams/:id/questions', protect, roleMiddleware('admin'), controller.addQuestionsToExam);
 
-// Get exams assigned to the logged-in student
-router.get('/my-exams', authMiddleware, async (req, res) => {
-  try {
-    const exams = await mainController.getAssignedExams(req.user.id);
-    res.json(exams);
-  } catch (err) {
-    console.error('Error in /api/my-exams:', err); // <-- Add this line
-    res.status(500).json({ msg: 'Error fetching assigned exams' });
-  }
+router.route('/exams/:id/analysis')
+    .get(protect, roleMiddleware('admin'), controller.getExamResultAnalysis); // Admin
+
+/** =================================== STUDENT-SPECIFIC ROUTES =================================== */
+router.get('/my-exams', protect, async (req, res) => {
+    try {
+        // The controller function is a helper, not a route handler, so we wrap it.
+        const exams = await controller.getAssignedExams(req.user.id);
+        res.json(exams);
+    } catch (err) {
+        console.error('Error in /api/my-exams:', err);
+        res.status(500).json({ msg: 'Error fetching assigned exams' });
+    }
 });
 
-// Question Bank Routes
-router.get('/api/questions', getQuestions);
-router.post('/api/questions', addQuestion);
-router.put('/api/questions/:id', updateQuestion);
-router.delete('/api/questions/:id', deleteQuestion);
-
-router.put('/exams/:id/questions', authMiddleware, roleMiddleware('admin'), mainController.addQuestionsToExam);
-
-export default router; 
+export default router;
