@@ -120,6 +120,132 @@ export async function getExamWithQuestions(req, res) {
   }
 }
 
+// --- Exam Controllers ---
+
+// Get all exams
+export async function getExams(req, res) {
+  try {
+    const exams = await Exam.find({}, '-questions'); // Exclude questions for performance
+    res.json(exams);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+// Get a single exam
+export async function getExam(req, res) {
+  try {
+    const exam = await Exam.findById(req.params.id);
+    if (!exam) {
+        return res.status(404).json({ message: 'Exam not found' });
+    }
+    res.json(exam);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+// Create a new exam
+export async function createExam(req, res) {
+  try {
+    const exam = new Exam(req.body);
+    await exam.save();
+    res.status(201).json(exam);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+}
+
+// Update an exam
+export async function updateExam(req, res) {
+  try {
+    const exam = await Exam.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.status(200).json(exam);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+}
+
+// Delete an exam
+export async function deleteExam(req, res) {
+  try {
+    await Exam.findByIdAndDelete(req.params.id);
+    res.status(204).send();
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+}
+
+// Add questions to an exam
+export async function addQuestionsToExam(req, res) {
+    try {
+        const { questionIds } = req.body;
+        const exam = await Exam.findByIdAndUpdate(
+            req.params.id,
+            { $set: { questions: questionIds } },
+            { new: true }
+        );
+        res.status(200).json(exam);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
+// Assign an exam to students
+export async function assignExamToStudents(req, res) {
+    try {
+        const { studentIds } = req.body;
+        const exam = await Exam.findByIdAndUpdate(
+            req.params.id,
+            { $addToSet: { assignedTo: { $each: studentIds } } },
+            { new: true }
+        );
+        res.status(200).json(exam);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
+// Get exams assigned to a student
+export async function getAssignedExams(userId) {
+    try {
+        const exams = await Exam.find({ assignedTo: userId });
+        return exams;
+    } catch (error) {
+        console.error('Error fetching assigned exams:', error);
+        throw new Error('Failed to fetch assigned exams');
+    }
+}
+
+// Get result analysis for an exam
+export async function getExamResultAnalysis(req, res) {
+    try {
+        const { id } = req.params;
+        const results = await Results.find({ exam: id }).populate('user', 'name');
+
+        if (!results || results.length === 0) {
+            return res.status(404).json({ message: 'No results found for this exam.' });
+        }
+
+        const analysis = {
+            totalSubmissions: results.length,
+            averageScore: results.reduce((acc, r) => acc + r.score, 0) / results.length,
+            highestScore: Math.max(...results.map(r => r.score)),
+            lowestScore: Math.min(...results.map(r => r.score)),
+            submissions: results.map(r => ({
+                studentName: r.user.name,
+                score: r.score,
+                total: r.total,
+                submittedAt: r.createdAt
+            }))
+        };
+
+        res.json(analysis);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 // --- Result Controllers ---
 
 export async function getResult(req, res) {
