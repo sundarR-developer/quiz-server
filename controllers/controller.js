@@ -147,25 +147,9 @@ export async function getExam(req, res) {
 
 
 
-// Update an exam
-export async function updateExam(req, res) {
-  try {
-    const exam = await Exam.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.status(200).json(exam);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-}
 
-// Delete an exam
-export async function deleteExam(req, res) {
-  try {
-    await Exam.findByIdAndDelete(req.params.id);
-    res.status(204).send();
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-}
+
+
 
 // Add questions to an exam
 export async function addQuestionsToExam(req, res) {
