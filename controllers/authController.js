@@ -60,6 +60,7 @@ export async function login(req, res) {
         return res.status(200).send({
             msg: "Login Successful...!",
             username: user.username,
+            role: user.role,
             token
         });
     } catch (error) {
