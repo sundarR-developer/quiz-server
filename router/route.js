@@ -12,12 +12,12 @@ router.post('/auth/login', authController.login);
 
 /** =================================== USER ROUTES (Admin Only) =================================== */
 router.route('/users')
-    .get(protect, roleMiddleware('admin'), controller.getUsers)
-    .post(protect, roleMiddleware('admin'), controller.addUser);
+    .get(protect, roleMiddleware('admin'), authController.getAllUsers)
+    .post(protect, roleMiddleware('admin'), authController.createUser);
 
 router.route('/users/:id')
-    .put(protect, roleMiddleware('admin'), controller.updateUser)
-    .delete(protect, roleMiddleware('admin'), controller.deleteUser);
+    .put(protect, roleMiddleware('admin'), authController.updateUser)
+    .delete(protect, roleMiddleware('admin'), authController.deleteUser);
 
 /** =================================== QUESTION ROUTES =================================== */
 router.route('/questions')
