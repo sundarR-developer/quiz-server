@@ -8,10 +8,7 @@ export async function register(req, res) {
     let user = await User.findOne({ email });
     if (user) return res.status(400).json({ msg: 'User already exists' });
 
-    // Hash the password before saving
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    user = new User({ name, email, password: hashedPassword, role });
+    user = new User({ name, email, password, role });
     await user.save();
     res.status(201).json({ msg: 'Registration successful' });
   } catch (err) {
@@ -51,8 +48,7 @@ export async function createUser(req, res) {
   try {
     let user = await User.findOne({ email });
     if (user) return res.status(400).json({ msg: 'User already exists' });
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user = new User({ name, email, password: hashedPassword, role });
+    user = new User({ name, email, password, role });
     await user.save();
     res.status(201).json({ msg: 'User created successfully' });
   } catch (err) {
