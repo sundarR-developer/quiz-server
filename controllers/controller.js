@@ -105,6 +105,21 @@ export async function deleteQuestion(req, res) {
   }
 }
 
+// Get a single exam with all its questions populated
+export async function getExamWithQuestions(req, res) {
+  try {
+    const { id } = req.params;
+    // Use .populate() to replace the question IDs with the full question documents
+    const exam = await Exam.findById(id).populate('questions');
+    if (!exam) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+    res.status(200).json(exam);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
 // --- Result Controllers ---
 
 export async function getResult(req, res) {
