@@ -147,10 +147,6 @@ export async function getExam(req, res) {
 
 
 
-
-
-
-
 // Add questions to an exam
 export async function addQuestionsToExam(req, res) {
     try {
@@ -166,20 +162,7 @@ export async function addQuestionsToExam(req, res) {
     }
 }
 
-// Assign an exam to students
-export async function assignExamToStudents(req, res) {
-    try {
-        const { studentIds } = req.body;
-        const exam = await Exam.findByIdAndUpdate(
-            req.params.id,
-            { $addToSet: { assignedTo: { $each: studentIds } } },
-            { new: true }
-        );
-        res.status(200).json(exam);
-    } catch (error) {
-        res.status(400).json({ error: error.message });
-    }
-}
+
 
 // Get exams assigned to a student
 export async function getAssignedExams(userId) {
@@ -408,47 +391,4 @@ export function testFunction(req, res) {
 
 export function someFunction(req, res) {
   res.send('It works!');
-}
-
-// --- Exam Assignment ---
-
-export const assignExamToStudents = async (req, res) => {
-  const { id } = req.params; // exam id
-  const { studentIds } = req.body; // array of user ids
-  try {
-    const exam = await Exam.findByIdAndUpdate(
-      id,
-      { $addToSet: { assignedTo: { $each: studentIds } } }, // avoid duplicates
-      { new: true }
-    );
-    res.json({ msg: 'Students assigned', exam });
-  } catch (err) {
-    res.status(500).json({ msg: 'Error assigning students' });
-  }
-};
-
-export async function getAssignedExams(userId) {
-  return await Exam.find({ assignedTo: new mongoose.Types.ObjectId(userId) });
-}
-
-export async function addQuestionsToExam(req, res) {
-  try {
-    const examId = req.params.id;
-    const { questionIds } = req.body; // expects an array of question IDs
-
-    // Update the exam's questions array
-    const updatedExam = await Exam.findByIdAndUpdate(
-      examId,
-      { $set: { questions: questionIds } },
-      { new: true }
-    ).populate('questions');
-
-    if (!updatedExam) {
-      return res.status(404).json({ message: 'Exam not found' });
-    }
-
-    res.status(200).json(updatedExam);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
 }
