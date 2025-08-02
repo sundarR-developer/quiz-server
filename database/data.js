@@ -63,3 +63,4 @@ export default [
 ];
 
 export const answers = [1, 1, 2, 2, 2, 2, 0, 1, 2, 1];
+
