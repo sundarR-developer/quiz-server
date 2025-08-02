@@ -99,6 +99,16 @@ export async function dropResult(req, res) {
   }
 }
 
+export async function getResultsByUser(req, res) {
+  try {
+    const { userId } = req.params;
+    const results = await Results.find({ user: userId }).populate('exam', 'name');
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
 // --- Exam Controllers ---
 
 export async function createExam(req, res) {
