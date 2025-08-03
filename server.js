@@ -1,82 +1,48 @@
-import { config } from "dotenv";
-config(); // Initialise dotenv first
+import express from 'express';
+import morgan from 'morgan';
+import cors from 'cors';
+import { config } from 'dotenv';
+import router from './router/route.js';
+import connect from './database/conn.js';
 
-import express from "express";
-import morgan from "morgan";
-import cors from "cors";
-import router from "./router/route.js";
-import authRoute from "./router/authRoute.js";
-import connect from "./database/conn.js";
-import questionRoute from "./router/questionRoute.js";
-
-// Debug: Check if environment variable is loaded
-console.log("ATLAS_URI:", process.env.ATLAS_URI ? "Loaded" : "Not loaded");
-console.log("JWT_SECRET:", process.env.JWT_SECRET ? "Loaded" : "Not loaded");
+config(); // Load environment variables at the very top
 
 const app = express();
 
-/** ✅ Setup CORS */
+// ✅ Fix 1: Define CORS config early
 const allowedOrigins = [
-  "http://localhost:3000",
-  "https://frolicking-quokka-e9d71f.netlify.app",
-  "https://unrivaled-lamington-8daa84.netlify.app",
+  'http://localhost:3000',
+  'https://unrivaled-lamington-8daa84.netlify.app',
+  'https://quiz-server-9.onrender.com'
 ];
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD'],
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'] // ✅ Allow Authorization header
 };
 
-// ✅ Middleware
-app.use(morgan("tiny"));
+// ✅ Fix 2: Use CORS middleware first
 app.use(cors(corsOptions));
+app.use(morgan('tiny'));
 app.use(express.json());
 
-/** Routes */
-app.use("/api", router);
-app.use("/api/auth", authRoute);
-app.use("/api/questions", questionRoute);
+// ✅ API routes
+app.use('/api', router);
 
-// Root route
-app.get("/", (req, res) => {
-  try {
-    res.json("Get root request");
-  } catch (error) {
-    res.json(error.message);
-  }
+app.get('/', (req, res) => {
+  res.json('Get Request');
 });
 
-// Health check route
-app.get("/test", (req, res) => {
-  res.send("Test route works!");
-});
-
-// ✅ Global Error Handling Middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack); // Log the error stack for debugging
-  res.status(500).send('Something broke!');
-});
-
-/** Connect to MongoDB and Start Server */
-const port = process.env.PORT || 8081;
-
+const port = process.env.PORT || 8080;
 connect()
   .then(() => {
-    try {
-      app.listen(port, () => {
-        console.log(`Server connected to http://localhost:${port}`);
-      });
-    } catch (error) {
-      console.log("Cannot connect to server");
-    }
+    app.listen(port, () => {
+      console.log(`Server connected to http://localhost:${port}`);
+    });
   })
   .catch((error) => {
-    console.log("Invalid database connection");
+    console.log('Invalid Database Connection...!');
+    console.log(error);
   });
-
