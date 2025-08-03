@@ -44,3 +44,4 @@ router.get('/exams/:id/analysis', protect, roleMiddleware('admin'), controller.g
 router.get('/my-exams', protect, controller.getMyAssignedExams);
 
 export default router;
+
