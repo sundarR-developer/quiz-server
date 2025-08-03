@@ -13,3 +13,4 @@ export default async function authMiddleware(req, res, next) {
     res.status(401).json({ msg: 'Token is not valid' });
   }
 } 
+
