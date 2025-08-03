@@ -34,11 +34,25 @@ export async function dropQuestions(req, res) {
   }
 }
 
-// Create a new question
+// Create a new question and add it to the exam
 export async function createQuestion(req, res) {
   try {
+    const { examId } = req.body;
+    if (!examId) {
+      return res.status(400).json({ error: 'Exam ID is required.' });
+    }
+
+    // 1. Create the new question
     const question = new Questions(req.body);
     await question.save();
+
+    // 2. Add the new question's ID to the exam's questions array
+    await Exam.findByIdAndUpdate(
+      examId,
+      { $push: { questions: question._id } },
+      { new: true }
+    );
+
     res.status(201).json(question);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -78,15 +92,68 @@ export async function getResult(req, res) {
 
 export async function storeResult(req, res) {
   try {
-    const { username, result, attempts, points, achieved, exam } = req.body;
-    if (!username || result.length === 0) {
-      throw new Error("Data not provided!");
+    const { examId, userId, answers } = req.body;
+
+    if (!examId || !userId || !answers) {
+      return res.status(400).json({ error: 'Missing required fields.' });
     }
-    Results.create({ username, result, attempts, points, achieved, exam }).then(
-      res.json({ msg: "Result saved successfully!" })
-    );
+
+    // Fetch the exam and populate the questions to get the full question objects
+    const exam = await Exam.findById(examId).populate('questions');
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found.' });
+    }
+
+    const questions = exam.questions;
+    let score = 0;
+    const feedback = [];
+    const total = questions.length;
+
+    // Loop through each question to calculate the score and generate feedback
+    for (const question of questions) {
+      const userAnswer = answers[question._id];
+      const isCorrect = userAnswer !== undefined && userAnswer === question.answer;
+
+      if (isCorrect) {
+        score++;
+      }
+
+      feedback.push({
+        question: question.question,
+        options: question.options,
+        correctAnswer: question.answer,
+        userAnswer: userAnswer,
+        isCorrect: isCorrect,
+        explanation: question.explanation || '',
+      });
+    }
+
+    // Create and save the new result
+    const newResult = new Results({
+      exam: examId,
+      user: userId,
+      score,
+      total,
+      feedback,
+    });
+
+    await newResult.save();
+
+    res.status(201).json(newResult);
   } catch (error) {
-    res.json({ error });
+    console.error('Error storing result:', error);
+    res.status(500).json({ error: 'Failed to store result.' });
+  }
+}
+
+export async function getResultsByUser(req, res) {
+  try {
+    const { userId } = req.params;
+    // Find results for the given user and populate the exam title
+    const results = await Results.find({ user: userId }).populate('exam', 'title');
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch results' });
   }
 }
 
@@ -96,22 +163,6 @@ export async function dropResult(req, res) {
     res.json({ msg: "Results deleted successfully!" });
   } catch (error) {
     res.json({ error });
-  }
-}
-
-export async function getResultsByUser(req, res) {
-  try {
-    const { userId } = req.params;
-
-    // Security Check: Ensure user is admin or is requesting their own results
-    if (req.user.id !== userId && req.user.role !== 'admin') {
-        return res.status(403).json({ message: 'Forbidden: You are not authorized to view these results.' });
-    }
-
-    const results = await Results.find({ user: userId }).populate('exam', 'name');
-    res.json(results);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
 }
 
@@ -217,6 +268,64 @@ export async function getExamResultAnalysis(req, res) {
 
 // --- User Management ---
 
+export async function getUsers(req, res) {
+  try {
+    // Fetch all users but exclude their passwords
+    const users = await User.find({}, '-password');
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+}
+
+export async function addUser(req, res) {
+  const { name, email, password, role } = req.body;
+  try {
+    let user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({ msg: 'User already exists' });
+    }
+    // Create new user instance (password will be hashed by pre-save hook in User model)
+    user = new User({ name, email, password, role });
+    await user.save();
+
+    // Return user data without the password
+    const { password: _, ...userResponse } = user.toObject();
+    res.status(201).json(userResponse);
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+}
+
+export async function updateUser(req, res) {
+  const { id } = req.params;
+  const { name, email, password, role } = req.body;
+
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Update fields
+    user.name = name || user.name;
+    user.email = email || user.email;
+    user.role = role || user.role;
+
+    // If a new password is provided, it will be hashed by the pre-save hook
+    if (password) {
+      user.password = password;
+    }
+
+    const updatedUser = await user.save();
+
+    const { password: _, ...userResponse } = updatedUser.toObject();
+    res.json(userResponse);
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error' });
+  }
+}
+
 export async function deleteUser(req, res) {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
@@ -258,14 +367,8 @@ export const assignExamToStudents = async (req, res) => {
   }
 };
 
-export async function getMyAssignedExams(req, res) {
-    try {
-        const exams = await Exam.find({ assignedTo: req.user.id });
-        res.json(exams);
-    } catch (err) {
-        console.error('Error in getMyAssignedExams:', err);
-        res.status(500).json({ msg: 'Error fetching assigned exams' });
-    }
+export async function getAssignedExams(userId) {
+  return await Exam.find({ assignedTo: new mongoose.Types.ObjectId(userId) });
 }
 
 export async function addQuestionsToExam(req, res) {
@@ -289,4 +392,3 @@ export async function addQuestionsToExam(req, res) {
     res.status(400).json({ error: error.message });
   }
 }
-
