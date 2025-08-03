@@ -13,7 +13,8 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:3000',
   'https://unrivaled-lamington-8daa84.netlify.app',
-  'https://quiz-server-9.onrender.com'
+  'https://quiz-server-9.onrender.com',
+  'https://wondrous-manatee-925699.netlify.app'
 ];
 
 const corsOptions = {
